@@ -13,7 +13,8 @@ YouTube downloads:
     PATH, so old portable folders keep working offline.
 
 Project:
-  - Released under the GPL-3.0. See LICENSE.
+  - Source released publicly under GPL-3.0-only. See LICENSE.
+    https://github.com/Squeedledorf/SL-Audio-Converter
 
 v2.1  (2026-06-24)
 ------------------

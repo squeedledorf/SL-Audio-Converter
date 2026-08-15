@@ -4,19 +4,20 @@ Second Life Audio Converter
 - YouTube mode: Download from a YouTube URL/playlist, then convert + split.
 Output: WAV, 44100 Hz, 16-bit PCM, configurable segment length/count.
 
+SPDX-License-Identifier: GPL-3.0-only
+
 Copyright (C) 2026 Squeedledorf
 
 This program is free software: you can redistribute it and/or modify it under
-the terms of the GNU General Public License as published by the Free Software
-Foundation, either version 3 of the License, or (at your option) any later
-version.
+the terms of version 3 of the GNU General Public License as published by the
+Free Software Foundation.
 
 This program is distributed in the hope that it will be useful, but WITHOUT ANY
 WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
 PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License along with
-this program.  If not, see <https://www.gnu.org/licenses/>.
+this program.  If not, see <https://www.gnu.org/licenses/gpl-3.0.html>.
 """
 
 import json
@@ -809,7 +810,7 @@ class App:
 
         # ── Results: per-track SL clip length (persists; doesn't scroll away) ──
         res_frame = ttk.LabelFrame(
-            main, text="Clip lengths — use these in Second Life", padding=6)
+            main, text="Clip lengths: use these in Second Life", padding=6)
         res_frame.pack(fill=tk.BOTH, expand=False, pady=(0, 6))
 
         cols = ("track", "len", "clips")
@@ -1271,7 +1272,7 @@ class App:
         win.grab_set()
 
         ttk.Label(
-            win, text=f"{len(entries)} tracks — check the ones you want:",
+            win, text=f"{len(entries)} tracks. Check the ones you want:",
             font=("Segoe UI", 10, "bold"),
         ).pack(anchor="w", padx=12, pady=(12, 6))
 

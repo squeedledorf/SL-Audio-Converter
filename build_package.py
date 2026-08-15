@@ -16,8 +16,9 @@ our own code.
 
 Run this on YOUR machine (where ffmpeg + deno are installed):  build_package.bat
 
-Copyright (C) 2026 Squeedledorf. Licensed under the GNU General Public License
-version 3 or later. See the LICENSE file for details.
+SPDX-License-Identifier: GPL-3.0-only
+Copyright (C) 2026 Squeedledorf. Licensed under version 3 of the GNU General
+Public License. See the LICENSE file for details.
 """
 
 import glob
@@ -127,7 +128,8 @@ code-signed).
 
 LICENSE
 -------
-GPL-3.0. See LICENSE. Source: https://github.com/Squeedledorf/SL-Audio-Converter
+GPL-3.0-only. See LICENSE.
+Source: https://github.com/Squeedledorf/SL-Audio-Converter
 Bundled ffmpeg and deno are separate projects under their own licenses.
 """
 

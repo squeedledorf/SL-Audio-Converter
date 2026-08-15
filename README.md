@@ -10,16 +10,16 @@ playback drifts, and SL wants that length to a tenth of a second. This works out
 the number for you and hands it over.
 
 ![Windows](https://img.shields.io/badge/platform-Windows-blue)
-![License](https://img.shields.io/badge/license-GPL--3.0-green)
+![License](https://img.shields.io/badge/license-GPL--3.0--only-green)
 
 ## What it does
 
-- **Local MP3s** — point it at a folder, get back numbered WAV clips.
-- **YouTube** — paste a URL, it downloads, converts and splits in one go.
+- **Local MP3s**: point it at a folder, get back numbered WAV clips.
+- **YouTube**: paste a URL, it downloads, converts and splits in one go.
   Playlists prompt first, with a checkbox list if you only want some tracks.
-- **Automatic split mode** — picks the fewest equal clips that all come in at
+- **Automatic split mode**: picks the fewest equal clips that all come in at
   30 seconds or under, then tells you the exact clip length to use in SL.
-- **Name handling** — SL truncates long inventory names from the end, which
+- **Name handling**: SL truncates long inventory names from the end, which
   eats the clip numbering and leaves you unable to order them. Titles get
   trimmed up front so the numbers always survive.
 - Clip lengths land in an on-screen table (double-click to copy) *and* in a
@@ -81,8 +81,11 @@ build machine and stages everything into `package/`.
 
 ## License
 
-GPL-3.0-or-later. Do what you like with it. If you distribute a modified
-version, it stays open under the same license and your users get the source too.
+`GPL-3.0-only`. Version 3 of the GNU GPL, exactly, with no "or any later
+version" clause. Full text in [LICENSE](LICENSE).
+
+Do what you like with it. If you distribute a modified version, it stays open
+under GPLv3 and your users get the source too.
 
 Third-party components are separate projects under their own terms and are not
 covered by this license:
