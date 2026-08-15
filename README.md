@@ -10,7 +10,7 @@ playback drifts, and SL wants that length to a tenth of a second. This works out
 the number for you and hands it over.
 
 ![Windows](https://img.shields.io/badge/platform-Windows-blue)
-![License](https://img.shields.io/badge/license-GPL--3.0--only-green)
+![License](https://img.shields.io/badge/license-GPLv3-green)
 
 ## What it does
 
@@ -81,11 +81,14 @@ build machine and stages everything into `package/`.
 
 ## License
 
-`GPL-3.0-only`. Version 3 of the GNU GPL, exactly, with no "or any later
-version" clause. Full text in [LICENSE](LICENSE).
+GNU General Public License, version 3. Full text in [LICENSE](LICENSE).
+
+Version 3 and nothing else. There's no "or any later version" clause, so the
+terms you're reading are the terms, and they can't shift if the FSF publishes a
+v4 later on.
 
 Do what you like with it. If you distribute a modified version, it stays open
-under GPLv3 and your users get the source too.
+under the same license and your users get the source too.
 
 Third-party components are separate projects under their own terms and are not
 covered by this license:
