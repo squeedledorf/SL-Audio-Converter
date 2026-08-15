@@ -29,7 +29,7 @@ the number for you and hands it over.
 ## Getting it
 
 Grab the portable zip from
-[Releases](https://github.com/Squeedledorf/sl-audio-converter/releases),
+[Releases](https://github.com/Squeedledorf/SL-Audio-Converter/releases),
 unzip it anywhere, run `SL Audio Converter.exe`. Nothing to install.
 
 First launch does two things: asks where you want downloads to go, and fetches

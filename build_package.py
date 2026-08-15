@@ -127,7 +127,7 @@ code-signed).
 
 LICENSE
 -------
-GPL-3.0. See LICENSE. Source: https://github.com/Squeedledorf/sl-audio-converter
+GPL-3.0. See LICENSE. Source: https://github.com/Squeedledorf/SL-Audio-Converter
 Bundled ffmpeg and deno are separate projects under their own licenses.
 """
 
