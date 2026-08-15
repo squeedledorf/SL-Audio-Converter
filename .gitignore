@@ -1,0 +1,17 @@
+# Build output
+build/
+dist/
+package/
+*.spec
+
+# Third-party binaries. Nothing here is ours to redistribute; the app fetches
+# yt-dlp at runtime, and ffmpeg/deno are pulled in at package time.
+*.exe
+*.zip
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Pre-git backup of the main script; history covers this now.
+sl_audio_converter_backup.pyw

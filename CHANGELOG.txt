@@ -1,0 +1,67 @@
+SL Audio Converter - Changelog
+==============================
+
+v2.2  (2026-08-15)
+------------------
+YouTube downloads:
+  - yt-dlp is no longer bundled. The app downloads it on first launch and
+    checks for a newer build once a day, so YouTube changes stop breaking
+    the app until the next release. Closing and reopening picks up the fix.
+  - yt-dlp now lives in %LOCALAPPDATA%\SL Audio Converter, so updates work
+    even when the app itself sits somewhere unwritable. If the download
+    fails, the app falls back to any yt-dlp already next to the exe or on
+    PATH, so old portable folders keep working offline.
+
+Project:
+  - Released under the GPL-3.0. See LICENSE.
+
+v2.1  (2026-06-24)
+------------------
+Splitting:
+  - Long song titles are now trimmed to fit Second Life's 63-character
+    inventory-name limit (measured without the .wav extension, the way SL
+    sees it), so the " <n>" clip number is always kept. Previously SL could
+    truncate the end of a long name on upload and eat the number, making the
+    clips impossible to order.
+
+v2.0  (2026-05-28)
+------------------
+YouTube downloads:
+  - Fixed "Requested format is not available" errors caused by YouTube's
+    move to JS-gated / SABR-only streaming. Updated the bundled yt-dlp and
+    added a fallback format selector.
+  - Now uses a deno JavaScript runtime (bundled) so YouTube extraction stays
+    reliable as YouTube tightens.
+  - Playlist warning: pasting a playlist URL now prompts before downloading,
+    with Proceed / View Playlist / Cancel.
+  - View Playlist: a scrollable, checkbox list to download only the tracks
+    you pick instead of the whole playlist (with Select all / Select none).
+  - Cancel button: stop a download in progress at any time.
+  - Each song is saved into its own folder by default (toggle with the
+    "Put each song in its own folder" checkbox; off = flat output folder).
+
+Setup / output:
+  - First launch asks for a default download folder; it pre-fills the YouTube
+    output and is remembered between runs. Override per-download with Browse.
+
+Splitting:
+  - New "Automatic" split mode: picks the fewest equal clips that are each
+    30 seconds or less (as long as possible), and reports the exact clip
+    length to use in Second Life.
+  - Clip lengths are now rounded to a tenth of a second (e.g. 28.6s) and the
+    displayed length always matches what is actually cut.
+  - Long song titles are trimmed to fit Windows path limits while keeping the
+    clip numbering intact.
+  - Clip lengths now show in a persistent on-screen table (double-click a row
+    to copy the length), and are saved to "SL clip lengths.txt" next to your
+    files, so the number you need for Second Life is never lost in the log.
+
+Distribution:
+  - Fully self-contained portable build: app + yt-dlp + ffmpeg + deno bundled.
+    Nothing to install. Unzip and run.
+
+v1.0
+----
+  - Initial release: convert local MP3 folders and YouTube audio to
+    Second Life-ready WAV clips (44100 Hz, 16-bit PCM).
+  - Split by clip length or by number of clips.
