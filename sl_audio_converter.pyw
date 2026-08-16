@@ -217,46 +217,34 @@ def update_yt_dlp(path):
     return (False, f"up to date ({after or 'unknown version'})")
 
 
-def ensure_yt_dlp(config, log_fn=None, progress_fn=None, cancel_fn=None,
-                  force_update=False):
-    """Return a working yt-dlp path, installing or refreshing it as needed.
+def resolve_yt_dlp():
+    """Return an already-installed yt-dlp, or None if we'd have to fetch one.
 
-    Called off the UI thread. Never raises: if every option fails we return
-    None and the caller tells the user what to do about it.
+    Nothing here downloads: we ask the user before pulling an 18 MB binary
+    off the internet on their behalf.
     """
-    def log(msg):
-        if log_fn:
-            log_fn(msg)
-
     managed = get_managed_yt_dlp_path()
-
-    # First run (or someone cleared the folder): fetch it.
-    if not os.path.isfile(managed):
-        log("First run: downloading yt-dlp (about 18 MB)...")
-        try:
-            download_yt_dlp(progress_fn=progress_fn, cancel_fn=cancel_fn)
-        except Exception as e:
-            fallback = find_fallback_yt_dlp()
-            if fallback:
-                log(f"Could not download yt-dlp ({e}); using {fallback}")
-                return fallback
-            log(f"Could not download yt-dlp: {e}")
-            return None
-        config["yt_dlp_last_check"] = int(time.time())
-        save_config(config)
-        log(f"yt-dlp {get_yt_dlp_version(managed) or 'installed'} ready.")
+    if os.path.isfile(managed):
         return managed
+    return find_fallback_yt_dlp()
 
-    # Already installed: check for a newer build now and then.
+
+def refresh_yt_dlp(path, config, log_fn=None, force=False):
+    """Keep our copy of yt-dlp current, at most once a day.
+
+    Only ever touches the managed copy. A fallback binary belongs to someone
+    else and may sit somewhere we can't write anyway.
+    """
+    if path != get_managed_yt_dlp_path():
+        return
     last = config.get("yt_dlp_last_check", 0)
-    due = force_update or (time.time() - last) > YT_DLP_CHECK_INTERVAL
-    if due:
-        changed, msg = update_yt_dlp(managed)
-        config["yt_dlp_last_check"] = int(time.time())
-        save_config(config)
-        if changed or force_update:
-            log(f"yt-dlp: {msg}")
-    return managed
+    if not force and (time.time() - last) <= YT_DLP_CHECK_INTERVAL:
+        return
+    changed, msg = update_yt_dlp(path)
+    config["yt_dlp_last_check"] = int(time.time())
+    save_config(config)
+    if log_fn and (changed or force):
+        log_fn(f"yt-dlp: {msg}")
 
 
 def get_deno_path():
@@ -703,19 +691,22 @@ class App:
         self.current_proc = None      # the live yt-dlp process, for termination
         self._results = []            # accumulated (track, length, segments, dir)
         self._results_dir = ""        # top output folder for the summary file
-        self.yt_dlp_ready = threading.Event()
-        self._yt_dlp_progress = (0, 0)   # (bytes done, bytes total)
+        self.yt_dlp_ready = threading.Event()   # set once we know, path or not
+        self._yt_dlp_needs_install = False      # nothing found; must ask first
+        self._yt_dlp_progress = (0, 0)          # (bytes done, bytes total)
         self.build_ui()
 
         # Default the YouTube output to the saved download folder.
         if self.config.get("download_folder"):
             self.yt_output.set(self.config["download_folder"])
 
-        # Ask for a download folder on first launch (once the window exists).
-        self.root.after(300, self.first_launch_check)
-
-        # Install / refresh yt-dlp in the background so startup never blocks.
+        # Look for yt-dlp in the background so startup never blocks.
         threading.Thread(target=self._yt_dlp_setup_worker, daemon=True).start()
+
+        # Ask for a download folder on first launch (once the window exists),
+        # then offer to install yt-dlp if there isn't one. In that order, so
+        # the two prompts don't land on top of each other.
+        self.root.after(300, self.first_launch_check)
 
     def build_ui(self):
         main = ttk.Frame(self.root, padding=12)
@@ -963,6 +954,7 @@ class App:
     def first_launch_check(self):
         """On first run, ask where YouTube downloads should go by default."""
         if self.config.get("download_folder"):
+            self._check_yt_dlp_install()
             return
         messagebox.showinfo(
             "Welcome",
@@ -974,91 +966,149 @@ class App:
             self.config["download_folder"] = path
             save_config(self.config)
             self.yt_output.set(path)
+        self._check_yt_dlp_install()
 
     # ── yt-dlp setup ─────────────────────────────────────────────────────
 
     def _yt_dlp_setup_worker(self):
-        """Background: make sure a current yt-dlp is available."""
-        def progress(done, total):
-            self._yt_dlp_progress = (done, total)
+        """Background: find yt-dlp and, if it's ours, keep it current.
 
+        Deliberately does not download anything. If nothing is installed we
+        flag it and let the UI thread ask first.
+        """
+        path = resolve_yt_dlp()
+        if not path:
+            self._yt_dlp_needs_install = True
+            return          # ready stays unset until the user answers
         try:
-            self.yt_dlp_path = ensure_yt_dlp(
-                self.config, log_fn=self.log_msg, progress_fn=progress)
+            refresh_yt_dlp(path, self.config, log_fn=self.log_msg)
         except Exception as e:
-            self.yt_dlp_path = None
-            self.log_msg(f"yt-dlp setup failed: {e}")
-        finally:
-            self.yt_dlp_ready.set()
+            self.log_msg(f"Could not check for a yt-dlp update: {e}")
+        self.yt_dlp_path = path
+        self.yt_dlp_ready.set()
+
+    def _check_yt_dlp_install(self):
+        """Once the welcome prompt is out of the way, offer to install yt-dlp
+        if there isn't one. Polls because the lookup runs off-thread."""
+        if self.yt_dlp_ready.is_set():
+            return
+        if self._yt_dlp_needs_install:
+            self._offer_yt_dlp_install()
+            return
+        self.root.after(100, self._check_yt_dlp_install)
+
+    def _offer_yt_dlp_install(self, continue_fn=None):
+        """Ask before downloading yt-dlp. Returns nothing; on a yes the
+        download dialog takes over and runs continue_fn when it finishes."""
+        want = messagebox.askyesno(
+            "yt-dlp not found",
+            "yt-dlp not found. Download now?\n\n"
+            "It's the downloader this app uses for YouTube, about 18 MB, "
+            "from the official yt-dlp releases page. The Local MP3s tab "
+            "works fine without it.",
+        )
+        if not want:
+            self.log_msg("Skipped the yt-dlp download. "
+                         "YouTube downloads will ask again when you need them.")
+            if continue_fn is not None:
+                # They said no to the thing they just asked for.
+                self.log_msg("--- Cancelled. ---")
+                self._reset_buttons()
+            return
+        self._yt_dlp_download_dialog(continue_fn)
 
     def _with_yt_dlp(self, continue_fn):
-        """Run continue_fn once yt-dlp is usable.
-
-        Almost always immediate; the wait dialog only shows up if someone
-        starts a YouTube job while the very first download is still running.
-        """
+        """Run continue_fn once yt-dlp is usable, asking to install it first
+        if we don't have one yet."""
         if self.yt_dlp_ready.is_set():
             if self.yt_dlp_path:
                 continue_fn()
             else:
                 self._yt_dlp_unavailable()
             return
-        self._yt_dlp_wait_dialog(continue_fn)
+        if self._yt_dlp_needs_install:
+            self._offer_yt_dlp_install(continue_fn)
+            return
+        # Still looking; this window is milliseconds wide in practice.
+        self.root.after(100, lambda: self._with_yt_dlp(continue_fn))
 
     def _yt_dlp_unavailable(self):
         messagebox.showerror(
             "yt-dlp not available",
-            "The app couldn't download yt-dlp, which it needs for YouTube.\n\n"
-            "Check your internet connection and restart the app. If you're "
-            "behind a firewall, you can also grab yt-dlp.exe yourself from\n"
+            "The download didn't work, and YouTube needs yt-dlp.\n\n"
+            "Check your internet connection and try again. If you're behind "
+            "a firewall, you can also grab yt-dlp.exe yourself from\n"
             "https://github.com/yt-dlp/yt-dlp/releases/latest\n"
             f"and drop it in:\n{get_data_dir()}",
         )
         self.log_msg("--- Cancelled. ---")
         self._reset_buttons()
 
-    def _yt_dlp_wait_dialog(self, continue_fn):
+    def _yt_dlp_download_dialog(self, continue_fn=None):
+        """Download yt-dlp with a progress bar, then hand back to continue_fn."""
         dlg = tk.Toplevel(self.root)
-        dlg.title("Setting up")
+        dlg.title("Downloading yt-dlp")
         dlg.transient(self.root)
         dlg.resizable(False, False)
         dlg.grab_set()
 
         frame = ttk.Frame(dlg, padding=16)
         frame.pack(fill=tk.BOTH, expand=True)
-        ttk.Label(
-            frame,
-            text="Getting yt-dlp, the YouTube downloader.\n"
-                 "This happens once and takes a moment.",
-            justify="left",
-        ).pack(anchor="w", pady=(0, 10))
+        ttk.Label(frame, text="Downloading yt-dlp...").pack(anchor="w", pady=(0, 10))
 
         bar = ttk.Progressbar(frame, mode="indeterminate", length=340)
         bar.pack(fill=tk.X)
         bar.start(12)
-        status = ttk.Label(frame, text="Starting...", foreground="gray")
+        status = ttk.Label(frame, text="Connecting...", foreground="gray")
         status.pack(anchor="w", pady=(6, 10))
 
-        cancelled = {"flag": False}
+        state = {"cancelled": False, "done": False, "error": None}
+        self._yt_dlp_progress = (0, 0)
+
+        def worker():
+            try:
+                path = download_yt_dlp(
+                    progress_fn=lambda d, t: setattr(
+                        self, "_yt_dlp_progress", (d, t)),
+                    cancel_fn=lambda: state["cancelled"],
+                )
+                self.config["yt_dlp_last_check"] = int(time.time())
+                save_config(self.config)
+                self.yt_dlp_path = path
+                self.log_msg(
+                    f"yt-dlp {get_yt_dlp_version(path) or 'installed'} ready.")
+            except Exception as e:
+                if not state["cancelled"]:
+                    state["error"] = e
+            finally:
+                state["done"] = True
 
         def cancel():
-            cancelled["flag"] = True
+            state["cancelled"] = True
             dlg.destroy()
-            self.log_msg("--- Cancelled. ---")
-            self._reset_buttons()
+            self.log_msg("Download cancelled.")
+            if continue_fn is not None:
+                self.log_msg("--- Cancelled. ---")
+                self._reset_buttons()
 
         ttk.Button(frame, text="Cancel", command=cancel).pack(anchor="e")
         dlg.protocol("WM_DELETE_WINDOW", cancel)
 
         def poll():
-            if cancelled["flag"]:
+            if state["cancelled"]:
                 return
-            if self.yt_dlp_ready.is_set():
+            if state["done"]:
                 dlg.destroy()
+                self._yt_dlp_needs_install = self.yt_dlp_path is None
                 if self.yt_dlp_path:
-                    continue_fn()
-                else:
+                    self.yt_dlp_ready.set()
+                    if continue_fn is not None:
+                        continue_fn()
+                elif continue_fn is not None:
+                    self.log_msg(f"Could not download yt-dlp: {state['error']}")
                     self._yt_dlp_unavailable()
+                else:
+                    self.log_msg(f"Could not download yt-dlp: {state['error']}")
                 return
             done, total = self._yt_dlp_progress
             if total:
@@ -1069,6 +1119,7 @@ class App:
                 status.config(text=f"{done / 1e6:.1f} / {total / 1e6:.1f} MB")
             self.root.after(150, poll)
 
+        threading.Thread(target=worker, daemon=True).start()
         poll()
 
     def get_split_params(self):

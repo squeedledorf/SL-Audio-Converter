@@ -32,16 +32,18 @@ Grab the portable zip from
 [Releases](https://github.com/Squeedledorf/SL-Audio-Converter/releases),
 unzip it anywhere, run `SL Audio Converter.exe`. Nothing to install.
 
-First launch does two things: asks where you want downloads to go, and fetches
-yt-dlp (about 18 MB), so you need to be online that first time.
+First launch asks where you want downloads to go, then offers to fetch yt-dlp
+(about 18 MB). Say yes and you're done. Say no and the Local MP3s tab still
+works fine; it'll ask again the first time you actually use YouTube.
 
 Windows SmartScreen will complain because the exe isn't code-signed. **More
 info** → **Run anyway**.
 
 ## About yt-dlp
 
-The app downloads yt-dlp itself instead of shipping a copy, and re-checks for a
-newer build once a day on startup.
+The app fetches yt-dlp itself instead of shipping a copy. It asks before the
+first download, then keeps it current on its own, re-checking for a newer build
+at most once a day on startup.
 
 This isn't just tidiness. YouTube reworks how it serves audio every few months,
 and each time it does, every frozen copy of yt-dlp in the wild stops working

@@ -89,9 +89,11 @@ HOW TO USE
 2. Double-click "SL Audio Converter.exe".
 3. First launch: you'll be asked to pick a default download folder.
    YouTube downloads go there unless you override it with Browse.
-   The app also downloads yt-dlp (about 18 MB) the first time it
-   runs, and keeps it up to date after that. You need an internet
-   connection for that first launch.
+   You'll then be asked whether to download yt-dlp (about 18 MB),
+   which is what the app uses for YouTube. Say yes and it handles
+   the rest, including keeping it up to date. Say no and the
+   Local MP3s tab still works; it'll ask again when you use the
+   YouTube tab.
 4. Pick a tab:
      - "Local MP3s": choose a folder of MP3s.
      - "YouTube":    paste a URL (output folder is pre-filled).
