@@ -1,6 +1,21 @@
 SL Audio Converter - Changelog
 ==============================
 
+v2.2.1  (2026-08-15)
+--------------------
+YouTube downloads:
+  - Fixed "HTTP Error 403: Forbidden" failing roughly half of all downloads.
+    YouTube is pushing its web clients onto SABR streaming, so yt-dlp was
+    falling back to the android_vr client for the audio, and YouTube rejects
+    a lot of those URLs unless the request carries a PO token. Because it
+    only happened some of the time it looked like a flaky connection.
+    The app now asks for the web_embedded client, which serves the same
+    audio-only stream from a URL that actually works, with tv_simply as a
+    backstop. Measured 8 for 8 across four videos where the old behaviour
+    was failing every other attempt.
+  - A 403 in the log now says what it actually means instead of blaming a
+    stale yt-dlp.
+
 v2.2  (2026-08-15)
 ------------------
 YouTube downloads:

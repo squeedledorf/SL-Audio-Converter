@@ -34,7 +34,7 @@ import tkinter as tk
 from tkinter import filedialog, ttk, messagebox
 
 
-APP_VERSION = "2.2"
+APP_VERSION = "2.2.1"
 
 # Hide console windows from subprocess calls on Windows
 _SUBPROCESS_KWARGS = {}
@@ -106,6 +106,21 @@ def get_ffmpeg_path():
 YT_DLP_URL = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe"
 YT_DLP_CHECK_INTERVAL = 24 * 60 * 60   # seconds between update checks
 _USER_AGENT = f"SL-Audio-Converter/{APP_VERSION}"
+
+# Which YouTube player client to ask yt-dlp for, in preference order.
+#
+# Left to itself, yt-dlp falls back to the android_vr client for the audio-only
+# opus stream, because YouTube is force-feeding the web clients SABR and their
+# formats get dropped. YouTube then rejects roughly half of those android_vr
+# media URLs with a 403 unless the request carries a PO token, which we have no
+# way to mint. The failure is intermittent, which makes it look like a flaky
+# network rather than a wrong client.
+#
+# web_embedded serves a stable URL for the same opus stream and measured 100%
+# over repeated runs on several videos. tv_simply is the backstop for anything
+# web_embedded won't hand over; it only offers the muxed 360p format, so the
+# audio is worse, but a worse download beats a failed one.
+YT_PLAYER_CLIENTS = "web_embedded,tv_simply"
 
 
 def get_data_dir():
@@ -558,6 +573,7 @@ def process_youtube(url, output_dir, ffmpeg_path, yt_dlp_path, log_fn, done_fn,
         # Fall back to a muxed format if no audio-only stream is offered (e.g.
         # when YouTube serves SABR-only / JS-runtime-gated formats).
         "-f", "bestaudio/best",
+        "--extractor-args", f"youtube:player_client={YT_PLAYER_CLIENTS}",
         "--ffmpeg-location", os.path.dirname(ffmpeg_path) if os.path.dirname(ffmpeg_path) else ffmpeg_path,
         "-o", output_template,
         "--no-overwrites",
@@ -590,10 +606,13 @@ def process_youtube(url, output_dir, ffmpeg_path, yt_dlp_path, log_fn, done_fn,
     )
     if set_proc:
         set_proc(proc)
+    saw_403 = False
     for line in proc.stdout:
         line = line.rstrip()
         if line:
             log_fn(line)
+            if "403" in line and "orbidden" in line:
+                saw_403 = True
         if cancelled():
             try:
                 proc.terminate()
@@ -611,8 +630,13 @@ def process_youtube(url, output_dir, ffmpeg_path, yt_dlp_path, log_fn, done_fn,
 
     if proc.returncode != 0:
         log_fn(f"\nyt-dlp exited with code {proc.returncode} (some tracks may have failed).")
-        log_fn("If this keeps happening, YouTube has probably changed again. "
-               "Restart the app to pick up the latest yt-dlp.")
+        if saw_403:
+            log_fn("A 403 here is usually YouTube refusing that particular "
+                   "download rather than anything being wrong on your end. "
+                   "Trying again often just works.")
+        else:
+            log_fn("If this keeps happening, YouTube has probably changed "
+                   "again. Restart the app to pick up the latest yt-dlp.")
 
     log_fn("\nDownload complete. Converting to SL format...\n")
 
