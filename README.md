@@ -67,7 +67,7 @@ winget install DenoLand.Deno
 python sl_audio_converter.pyw
 ```
 
-No pip dependencies. It's tkinter and the standard library.
+It's tkinter and the standard library.
 
 `setup.bat` does all of the above for you if you'd rather not.
 
@@ -84,10 +84,6 @@ build machine and stages everything into `package/`.
 ## License
 
 GNU General Public License, version 3. Full text in [LICENSE](LICENSE).
-
-Version 3 and nothing else. There's no "or any later version" clause, so the
-terms you're reading are the terms, and they can't shift if the FSF publishes a
-v4 later on.
 
 Do what you like with it. If you distribute a modified version, it stays open
 under the same license and your users get the source too.
