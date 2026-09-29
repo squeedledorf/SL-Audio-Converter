@@ -1,6 +1,22 @@
 SL Audio Converter - Changelog
 ==============================
 
+v2.3  (2026-09-28)
+------------------
+Linux:
+  - Runs on Linux from source. The app used to look for ffmpeg, yt-dlp and
+    deno with the Windows-only "where" command, so on Linux it found
+    nothing and offered to download yt-dlp.exe, which can't run there. It
+    now looks things up the same way on every platform, and downloads the
+    plain Python build of yt-dlp when it isn't on Windows.
+  - Settings go in ~/.config/SL Audio Converter and the app's own yt-dlp in
+    ~/.local/share/SL Audio Converter, instead of a new folder in your home
+    directory.
+  - New install_linux.sh adds SL Audio Converter to your application
+    launcher, and warns if python3, tkinter or ffmpeg are missing.
+
+Windows: no change.
+
 v2.2.1  (2026-08-15)
 --------------------
 YouTube downloads:

@@ -10,6 +10,7 @@ playback drifts, and SL wants that length to a tenth of a second. This works out
 the number for you and hands it over.
 
 ![Windows](https://img.shields.io/badge/platform-Windows-blue)
+![Linux](https://img.shields.io/badge/platform-Linux-blue)
 ![License](https://img.shields.io/badge/license-GPLv3-green)
 
 ## What it does
@@ -51,7 +52,7 @@ until someone ships a new build. Bundling one meant re-releasing the whole app
 every time that happened. Now the fix arrives on its own and the worst case is
 "close it and open it again".
 
-It lives in `%LOCALAPPDATA%\SL Audio Converter\` so updates work even if the app
+It lives in `%LOCALAPPDATA%\SL Audio Converter\` (`~/.local/share/SL Audio Converter/` on Linux) so updates work even if the app
 itself is somewhere unwritable. If the download fails, the app falls back to any
 yt-dlp sitting next to the exe or on your PATH.
 
@@ -70,6 +71,34 @@ python sl_audio_converter.pyw
 It's tkinter and the standard library.
 
 `setup.bat` does all of the above for you if you'd rather not.
+
+## Linux
+
+There's no packaged build; it runs straight from source. You need Python 3.8+
+with tkinter, and ffmpeg. deno is recommended for the same reason as on
+Windows. On Arch:
+
+```
+sudo pacman -S python tk ffmpeg deno
+```
+
+Debian and Ubuntu call tkinter `python3-tk`; Fedora calls it `python3-tkinter`.
+
+Clone or unzip the source somewhere you'll keep it, then:
+
+```
+./install_linux.sh
+```
+
+That puts **SL Audio Converter** in your application launcher. It points at the
+folder you ran it from, so run it again if you move the folder, and
+`./install_linux.sh --remove` takes it out. You can also skip the launcher and
+run `python3 sl_audio_converter.pyw`.
+
+If yt-dlp is already installed from your package manager, the app uses that
+one and leaves updating it to your package manager. Otherwise it offers to
+download its own copy, the same as on Windows. Settings go in
+`~/.config/SL Audio Converter/`.
 
 ## Building
 

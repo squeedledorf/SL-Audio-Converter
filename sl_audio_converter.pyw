@@ -24,6 +24,8 @@ import json
 import math
 import os
 import re
+import shutil
+import stat
 import sys
 import subprocess
 import threading
@@ -34,12 +36,15 @@ import tkinter as tk
 from tkinter import filedialog, ttk, messagebox
 
 
-APP_VERSION = "2.2.1"
+APP_VERSION = "2.3"
 
 # Hide console windows from subprocess calls on Windows
 _SUBPROCESS_KWARGS = {}
 if os.name == "nt":
     _SUBPROCESS_KWARGS["creationflags"] = subprocess.CREATE_NO_WINDOW
+
+# Executable suffix for the helper binaries we look for or download.
+_EXE = ".exe" if os.name == "nt" else ""
 
 
 # ── Settings persistence ────────────────────────────────────────────────────
@@ -47,7 +52,8 @@ if os.name == "nt":
 def get_config_path():
     """Per-user config file (kept out of the portable folder so it survives
     re-extracting / moving the app)."""
-    base = os.environ.get("APPDATA") or os.path.expanduser("~")
+    base = (os.environ.get("APPDATA") or os.environ.get("XDG_CONFIG_HOME")
+            or os.path.join(os.path.expanduser("~"), ".config"))
     return os.path.join(base, "SL Audio Converter", "config.json")
 
 
@@ -84,15 +90,7 @@ def get_ffmpeg_path():
         candidate = os.path.join(base, name)
         if os.path.isfile(candidate):
             return candidate
-    try:
-        result = subprocess.run(
-            ["where", "ffmpeg"], capture_output=True, text=True, shell=True
-        )
-        if result.returncode == 0:
-            return result.stdout.strip().splitlines()[0]
-    except Exception:
-        pass
-    return "ffmpeg"
+    return shutil.which("ffmpeg") or "ffmpeg"
 
 
 # ── yt-dlp management ──────────────────────────────────────────────────────
@@ -103,7 +101,9 @@ def get_ffmpeg_path():
 # writable no matter where the app itself was unzipped (Program Files, a
 # read-only share, a USB stick).
 
-YT_DLP_URL = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe"
+# Windows gets the standalone exe; elsewhere the plain "yt-dlp" zipapp, which
+# runs on the same Python this app does and updates itself with -U.
+YT_DLP_URL = f"https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp{_EXE}"
 YT_DLP_CHECK_INTERVAL = 24 * 60 * 60   # seconds between update checks
 _USER_AGENT = f"SL-Audio-Converter/{APP_VERSION}"
 
@@ -126,13 +126,14 @@ YT_PLAYER_CLIENTS = "web_embedded,tv_simply"
 def get_data_dir():
     """Per-machine folder for things the app downloads and owns."""
     base = (os.environ.get("LOCALAPPDATA") or os.environ.get("APPDATA")
-            or os.path.expanduser("~"))
+            or os.environ.get("XDG_DATA_HOME")
+            or os.path.join(os.path.expanduser("~"), ".local", "share"))
     return os.path.join(base, "SL Audio Converter")
 
 
 def get_managed_yt_dlp_path():
     """Where our own copy of yt-dlp lives (may not exist yet)."""
-    return os.path.join(get_data_dir(), "yt-dlp.exe")
+    return os.path.join(get_data_dir(), f"yt-dlp{_EXE}")
 
 
 def find_fallback_yt_dlp():
@@ -143,25 +144,16 @@ def find_fallback_yt_dlp():
     folder may not even be writable -- but they keep the app usable offline.
     """
     for candidate in [
-        os.path.join(get_base_dir(), "yt-dlp.exe"),
-        os.path.join(os.path.expanduser("~"), "Downloads", "yt-dlp.exe"),
+        os.path.join(get_base_dir(), f"yt-dlp{_EXE}"),
+        os.path.join(os.path.expanduser("~"), "Downloads", f"yt-dlp{_EXE}"),
     ]:
-        if os.path.isfile(candidate):
+        if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
             return candidate
-    try:
-        result = subprocess.run(
-            ["where", "yt-dlp"], capture_output=True, text=True, shell=True,
-            **_SUBPROCESS_KWARGS,
-        )
-        if result.returncode == 0:
-            return result.stdout.strip().splitlines()[0]
-    except Exception:
-        pass
-    return None
+    return shutil.which("yt-dlp")
 
 
 def download_yt_dlp(progress_fn=None, cancel_fn=None):
-    """Download the current yt-dlp.exe into our data folder; return its path.
+    """Download the current yt-dlp into our data folder; return its path.
 
     Writes to a temp name and renames on success, so an interrupted or failed
     download can never leave a half-written binary in place of a working one.
@@ -186,6 +178,8 @@ def download_yt_dlp(progress_fn=None, cancel_fn=None):
                     done += len(chunk)
                     if progress_fn:
                         progress_fn(done, total)
+        if os.name != "nt":
+            os.chmod(part, os.stat(part).st_mode | stat.S_IXUSR)
         os.replace(part, dest)
         return dest
     except BaseException:
@@ -270,19 +264,13 @@ def get_deno_path():
     path explicitly via --js-runtimes so detection doesn't depend on PATH.
     """
     # A deno.exe shipped alongside the app (packaged build) wins.
-    bundled = os.path.join(get_base_dir(), "deno.exe")
+    bundled = os.path.join(get_base_dir(), f"deno{_EXE}")
     if os.path.isfile(bundled):
         return bundled
 
-    try:
-        result = subprocess.run(
-            ["where", "deno"], capture_output=True, text=True, shell=True,
-            **_SUBPROCESS_KWARGS,
-        )
-        if result.returncode == 0:
-            return result.stdout.strip().splitlines()[0]
-    except Exception:
-        pass
+    on_path = shutil.which("deno")
+    if on_path:
+        return on_path
 
     local = os.environ.get("LOCALAPPDATA", "")
     if local:
@@ -1061,7 +1049,7 @@ class App:
             "yt-dlp not available",
             "The download didn't work, and YouTube needs yt-dlp.\n\n"
             "Check your internet connection and try again. If you're behind "
-            "a firewall, you can also grab yt-dlp.exe yourself from\n"
+            f"a firewall, you can also grab yt-dlp{_EXE} yourself from\n"
             "https://github.com/yt-dlp/yt-dlp/releases/latest\n"
             f"and drop it in:\n{get_data_dir()}",
         )
